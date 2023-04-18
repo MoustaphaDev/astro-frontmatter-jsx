@@ -1,0 +1,57 @@
+{
+    "name": "astro-frontmatter-jsx",
+    "version": "0.0.6",
+    "type": "module",
+    "scripts": {
+        "prepack": "unbuild",
+        "build": "unbuild"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs"
+        },
+        "./package.json": "./package.json"
+    },
+    "types": "./dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MoustaphaDev/astro-frontmatter-jsx",
+        "directory": "packages/integration"
+    },
+    "bugs": {
+        "url": "https://github.com/MoustaphaDev/astro-frontmatter-jsx/issues"
+    },
+    "homepage": "https://github.com/MoustaphaDev/astro-frontmatter-jsx/tree/main/packages/integration/README.md",
+    "files": [
+        "dist",
+        "CHANGELOG.md",
+        "package.json"
+    ],
+    "keywords": [
+        "withastro",
+        "astro",
+        "astro-integration",
+        "astro-jsx",
+        "jsx",
+        "astro-frontmatter-jsx"
+    ],
+    "author": {
+        "name": "Moustapha Kebe",
+        "email": "moustapha.happydev@gmail.com",
+        "url": "https://twitter.com/a_happydev"
+    },
+    "license": "MIT",
+    "packageManager": "pnpm@7.6.0",
+    "devDependencies": {
+        "unbuild": "^1.1.1",
+        "vite": "^4.0.3"
+    },
+    "dependencies": {
+        "@astrojs/compiler": "^1.2.0",
+        "astro": "^2.1.7",
+        "es-module-lexer": "^1.2.0",
+        "kleur": "^4.1.5",
+        "vite": "^4.2.1"
+    }
+}
