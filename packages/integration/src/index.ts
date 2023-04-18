@@ -78,6 +78,7 @@ function createVitePluginInjector(opts: IntegrationOptions) {
                         foundFrontmatter = true;
                         // implement jsx transpilation here
                         // node.value is the frontmatter
+                        console.log({ frontmatter: node.value });
                         // log('info', 'Processed frontmatter');
                         didChange = true;
                     }
