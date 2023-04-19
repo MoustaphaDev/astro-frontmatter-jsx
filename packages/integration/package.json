@@ -45,7 +45,8 @@
     "license": "MIT",
     "packageManager": "pnpm@7.6.0",
     "devDependencies": {
-        "script-runner": "workspace:*"
+        "script-runner": "workspace:*",
+        "typescript": "^5.0.4"
     },
     "dependencies": {
         "@astrojs/compiler": "^1.2.0",

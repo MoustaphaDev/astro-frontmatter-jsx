@@ -4,7 +4,6 @@ import { promises as fs } from 'fs';
 import { dim, green, red, yellow } from 'kleur/colors';
 import glob from 'tiny-glob';
 
-//
 const defaultConfig = {
     minify: false,
     format: 'esm',
@@ -19,13 +18,13 @@ const dt = new Intl.DateTimeFormat('en-us', {
     minute: '2-digit',
 });
 
-export default async function build(...args) {
+export default async function build(...args: any[]) {
     const config = Object.assign({}, defaultConfig);
     const isDev = args.slice(-1)[0] === 'IS_DEV';
     const patterns = args
         .filter((f) => !!f) // remove empty args
-        .map((f) => f.replace(/^'/, '').replace(/'$/, '')); // Needed for Windows: glob strings contain surrounding string chars??? remove these
-    let entryPoints = [
+        .map((f) => f.replace(/^'/, '').replace(/'$/, ''));
+    const entryPoints = [
         await Promise.all(
             patterns.map((pattern) =>
                 glob(pattern, { filesOnly: true, absolute: true })
@@ -109,6 +108,6 @@ export default async function build(...args) {
     });
 }
 
-async function clean(outdir) {
+async function clean(outdir: string) {
     return deleteAsync([`${outdir}/**`, `!${outdir}/**/*.d.ts`]);
 }

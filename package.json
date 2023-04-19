@@ -4,8 +4,8 @@
     "type": "module",
     "scripts": {
         "start": "pnpm --filter demo run start",
-        "build": "turbo run build --output-logs=new-only --no-deps --filter=astro-frontmatter-jsx --concurrency=1",
-        "dev": "turbo run dev --output-logs=new-only --no-deps --filter=astro-frontmatter-jsx --concurrency=1",
+        "build": "turbo run build --output-logs=new-only --no-deps --filter=astro-frontmatter-jsx",
+        "dev": "turbo run dev --no-deps --no-cache --parallel --no-deps --filter=astro-frontmatter-jsx --concurrency=1",
         "version": "changeset version && pnpm install --no-frozen-lockfile"
     },
     "workspaces": [
@@ -19,7 +19,6 @@
         "@types/node": "^18.15.9",
         "turbo": "^1.9.3",
         "typescript": "^4.9.5",
-        "unbuild": "^1.1.2",
         "vitest": "^0.23.4"
     }
 }
