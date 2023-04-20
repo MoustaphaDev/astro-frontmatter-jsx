@@ -3,9 +3,7 @@ import type { Plugin } from 'vite';
 import { parse as compilerParse } from '@astrojs/compiler';
 import { walk as compilerWalk, is, serialize } from '@astrojs/compiler/utils';
 import kleur from 'kleur';
-import { transform } from '@swc/core';
-import { swcInlineConfig } from './swc-config';
-// import { generate } from 'escodegen';
+import { transform } from 'esbuild';
 import { print } from 'recast';
 import { parseModule } from 'esprima';
 import { walk as jsTreeWalker } from 'estree-walker';
@@ -86,7 +84,10 @@ function createVitePluginInjector(opts: IntegrationOptions) {
                         // node.value is the frontmatter
                         const { code: frontmatter } = await transform(
                             node.value,
-                            swcInlineConfig
+                            {
+                                loader: 'tsx',
+                                target: 'esnext',
+                            }
                         );
 
                         const preprocessedFM =

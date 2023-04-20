@@ -49,6 +49,9 @@ importers:
       astro:
         specifier: ^2.1.7
         version: 2.1.7(@types/node@18.15.9)
+      esbuild:
+        specifier: ^0.17.12
+        version: 0.17.17
       escodegen:
         specifier: ^2.0.0
         version: 2.0.0
@@ -5688,7 +5691,7 @@ packages:
         optional: true
     dependencies:
       '@types/node': 18.15.9
-      esbuild: 0.17.13
+      esbuild: 0.17.17
       postcss: 8.4.21
       resolve: 1.22.1
       rollup: 3.20.2
