@@ -4,9 +4,10 @@ import { parse as compilerParse } from '@astrojs/compiler';
 import { walk as compilerWalk, is, serialize } from '@astrojs/compiler/utils';
 import kleur from 'kleur';
 import { transform } from 'esbuild';
-import { print } from 'recast';
-import { parseModule } from 'esprima';
+// import { print } from 'recast';
+import { parse as parseModule } from 'acorn';
 import { walk as jsTreeWalker } from 'estree-walker';
+import MagicString from 'magic-string';
 
 type IntegrationOptions = {
     silenceLogs?: boolean;
@@ -75,10 +76,15 @@ function createVitePluginInjector(opts: IntegrationOptions) {
                 let foundFrontmatter = false;
                 let didChange = false;
 
+                let s: MagicString;
+                let walkedResolve: (value: any) => void;
+                let walkedPromise = new Promise((resolve) => {
+                    walkedResolve = resolve;
+                });
+
                 compilerWalk(ast, async (node) => {
                     if (foundFrontmatter) return;
                     if (is.frontmatter(node)) {
-                        log('info', 'Found frontmatter', opts.silenceLogs);
                         foundFrontmatter = true;
                         // implement jsx transpilation here
                         // node.value is the frontmatter
@@ -87,27 +93,30 @@ function createVitePluginInjector(opts: IntegrationOptions) {
                             {
                                 loader: 'tsx',
                                 target: 'esnext',
+                                pure: [],
                             }
                         );
 
-                        const preprocessedFM =
-                            transformCreateElementToH(frontmatter);
+                        s = transformCreateElementToH(frontmatter);
+                        const preprocessedFM = s.toString();
                         node.value = preprocessedFM;
-                        console.log({ preprocessedFM });
-                        log('info', 'Processed frontmatter');
                         didChange = true;
+                        walkedResolve(true);
                     }
                 });
 
                 // TODO: make a PR to add a `asyncWalk` utility function so
-                // that we can await it instead of using a timeout
-                // to wait for the "walk" call to complete
-                await wait(1000);
-                if (!didChange) return;
+                // that we can await it instead doing this trick
+                await walkedPromise;
+                if (!didChange || !foundFrontmatter) return;
 
                 const result = serialize(ast);
-
-                return result;
+                return {
+                    code: result,
+                    map: s!.generateMap({
+                        hires: true,
+                    }),
+                };
             },
         };
     }
@@ -119,8 +128,12 @@ function transformCreateElementToH(frontmatter: string) {
     // Parse the code using Esprima
     console.log({ frontmatter });
 
-    const ast = parseModule(frontmatter);
+    const ast = parseModule(frontmatter, {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+    });
 
+    let s = new MagicString(frontmatter);
     // Traverse the AST and transform the relevant nodes
     let hasReactJsx = false;
     jsTreeWalker(ast, {
@@ -128,78 +141,60 @@ function transformCreateElementToH(frontmatter: string) {
             if (
                 node.type === 'CallExpression' &&
                 node.callee.type === 'MemberExpression' &&
-                // @ts-expect-error types are wrong
                 node.callee.object.name === 'React' &&
-                // @ts-expect-error types are wrong
                 node.callee.property.name === 'createElement' &&
                 node.arguments.length >= 2
             ) {
+                // could go safer and modify the ast and then print it back
+                // instead of modifying the string directly based on the ast
+                // but this is just a POC
+
+                // mark that we have found jsx in the frontmatter
                 hasReactJsx = true;
-                // Replace the React.createElement call with a call to h
-                node.callee = { type: 'Identifier', name: 'h' };
 
-                // Collect the children into an array and remove them from the argument list
-                const children = [];
-                node.arguments.splice(2).forEach((arg) => {
-                    if (arg.type === 'Literal') {
-                        // @ts-expect-error types are wrong
-                        children.push({ type: 'Literal', value: arg.value });
-                    } else if (arg.type === 'Identifier') {
-                        // @ts-expect-error types are wrong
-                        children.push({
-                            type: 'Identifier',
-                            name: arg.name,
-                        });
-                    } else {
-                        // @ts-expect-error types are wrong
-                        children.push(arg);
-                    }
-                });
+                // Replace the React.createElement call with astro jsx's h function
+                s.overwrite(
+                    node.callee.object.start,
+                    node.callee.property.end,
+                    'async () => h'
+                );
 
-                // Add a childrenF property to the props object that contains the children array
-                const propsArg = node.arguments[1];
-                if (propsArg && propsArg.type === 'ObjectExpression') {
-                    // @ts-expect-error types are wrong
-                    propsArg.properties.push({
-                        type: 'Property',
-                        key: { type: 'Identifier', name: 'children' },
-                        value: {
-                            type: 'ArrayExpression',
-                            elements: children,
-                        },
-                        kind: 'init',
-                    });
-                } else {
-                    node.arguments.splice(1, 0, {
-                        type: 'ObjectExpression',
-                        properties: [
-                            // @ts-expect-error types are wrong
-                            {
-                                type: 'Property',
-                                key: {
-                                    type: 'Identifier',
-                                    name: 'children',
-                                },
-                                value: {
-                                    type: 'ArrayExpression',
-                                    elements: children,
-                                },
-                                kind: 'init',
-                            },
-                        ],
-                    });
-                }
+                // Replace the second argument with a children property
+                const children = node.arguments
+                    .slice(2)
+                    .map(
+                        (arg) => `${frontmatter.substring(arg.start, arg.end)}`
+                    );
+                const secondArgEnd = node.arguments[1].end;
+                const propsString = frontmatter.substring(
+                    node.arguments[1].start,
+                    secondArgEnd
+                );
+                const childrenArg = `, { ...${propsString}, children: [${children.join(
+                    ', '
+                )}] }`;
+
+                s.overwrite(
+                    node.arguments[1].start - 2,
+                    secondArgEnd,
+                    childrenArg
+                );
+
+                // Remove the third and following arguments
+                console.log(JSON.stringify(node, null, 2));
+                s.remove(
+                    node.arguments[2].start,
+                    node.arguments[node.arguments.length - 1].end
+                );
             }
         },
     });
+
     if (hasReactJsx) {
-        // Generate the transformed code by serializing the AST
-        console.log('has react jsx');
-        const transformedCode = print(ast).code.trim();
-        console.log('has end react jsx');
-        return H_IMPORT + transformedCode;
+        s.prepend(H_IMPORT);
     }
-    return frontmatter;
+
+    return s;
 }
 
 async function wait(ms) {

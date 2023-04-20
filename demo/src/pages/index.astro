@@ -1,5 +1,8 @@
 ---
 import Card from './_Card.astro';
+// console.log({ $$result });
+
+import { jsx as h } from 'astro/jsx-runtime';
 
 const getCard = (type: 'quizz' | 'note') => {
     if (type === 'quizz') {
@@ -8,8 +11,17 @@ const getCard = (type: 'quizz' | 'note') => {
     return <h1> This is a note card</h1>;
 };
 
-const QuizzCard = async () => getCard('quizz');
-const NoteCard = async () => getCard('note');
+const MyCard = (
+    <Card>
+        <h1> Hi!!</h1>
+        <h1> Hi!!</h1>
+        <h1> Hi!!</h1>
+    </Card>
+);
+
+const QuizzCard = getCard('quizz');
+const NoteCard = getCard('note');
+console.log({ QuizzCard, NoteCard });
 ---
 
 <html lang="en">
@@ -24,5 +36,6 @@ const NoteCard = async () => getCard('note');
         <h1>Astro</h1>
         <QuizzCard />
         <NoteCard />
+        <MyCard />
     </body>
 </html>
