@@ -5,7 +5,7 @@
     "scripts": {
         "start": "pnpm --filter demo run start",
         "build": "turbo run build --output-logs=new-only --no-deps --filter=astro-frontmatter-jsx",
-        "dev": "turbo run dev --no-deps --no-cache --parallel --no-deps --filter=astro-frontmatter-jsx --concurrency=1",
+        "dev": "turbo run dev --no-deps --no-cache --parallel --filter=astro-frontmatter-jsx --concurrency=1",
         "version": "changeset version && pnpm install --no-frozen-lockfile"
     },
     "workspaces": [
