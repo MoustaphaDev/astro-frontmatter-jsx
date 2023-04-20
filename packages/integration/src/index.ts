@@ -1,8 +1,10 @@
-import type { AstroIntegration, AstroConfig } from 'astro';
+import type { AstroIntegration } from 'astro';
 import type { Plugin } from 'vite';
-import { parse } from '@astrojs/compiler';
-import { walk, is, serialize } from '@astrojs/compiler/utils';
+import { parse as compilerParse } from '@astrojs/compiler';
+import { walk as compilerWalk, is, serialize } from '@astrojs/compiler/utils';
 import kleur from 'kleur';
+import { transform } from '@swc/core';
+import { swcInlineConfig } from './swc-config';
 
 type IntegrationOptions = {
     silenceLogs?: boolean;
@@ -67,18 +69,23 @@ function createVitePluginInjector(opts: IntegrationOptions) {
             async transform(code, id) {
                 if (!id.endsWith('.astro')) return;
 
-                const { ast } = await parse(code);
+                const { ast } = await compilerParse(code);
                 let foundFrontmatter = false;
                 let didChange = false;
 
-                walk(ast, async (node) => {
+                compilerWalk(ast, async (node) => {
                     if (foundFrontmatter) return;
                     if (is.frontmatter(node)) {
                         log('info', 'Found frontmatter', opts.silenceLogs);
                         foundFrontmatter = true;
                         // implement jsx transpilation here
                         // node.value is the frontmatter
-                        console.log({ frontmatter: node.value });
+                        const { code: frontmatter } = await transform(
+                            node.value,
+                            swcInlineConfig
+                        );
+
+                        node.value = frontmatter;
                         // log('info', 'Processed frontmatter');
                         didChange = true;
                     }
@@ -131,7 +138,7 @@ function log(
             : kleur.cyan;
     console.log(
         `${kleur.gray(date)} ${messageColor(
-            kleur.bold('[astro-default-preprender]')
+            kleur.bold('[astro-frontmatter-jsx]')
         )} ${messageColor(message)}`
     );
 }
