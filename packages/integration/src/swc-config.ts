@@ -1,22 +1,14 @@
-export const swcInlineConfig = {
+import type { Options } from '@swc/core';
+
+export const swcInlineConfig: Options = {
     jsc: {
         parser: {
             syntax: 'typescript',
             tsx: true,
         },
-        target: 'es2022',
-        loose: false,
-        minify: {
-            compress: false,
-            mangle: false,
-        },
+        target: 'esnext',
     },
     module: {
-        type: 'es6',
-    },
-    minify: false,
-    isModule: true,
-    env: {
-        targets: '',
+        type: 'commonjs',
     },
 } as const;

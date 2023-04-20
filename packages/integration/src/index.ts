@@ -5,6 +5,10 @@ import { walk as compilerWalk, is, serialize } from '@astrojs/compiler/utils';
 import kleur from 'kleur';
 import { transform } from '@swc/core';
 import { swcInlineConfig } from './swc-config';
+// import { generate } from 'escodegen';
+import { print } from 'recast';
+import { parseModule } from 'esprima';
+import { walk as jsTreeWalker } from 'estree-walker';
 
 type IntegrationOptions = {
     silenceLogs?: boolean;
@@ -85,8 +89,11 @@ function createVitePluginInjector(opts: IntegrationOptions) {
                             swcInlineConfig
                         );
 
-                        node.value = frontmatter;
-                        // log('info', 'Processed frontmatter');
+                        const preprocessedFM =
+                            transformCreateElementToH(frontmatter);
+                        node.value = preprocessedFM;
+                        console.log({ preprocessedFM });
+                        log('info', 'Processed frontmatter');
                         didChange = true;
                     }
                 });
@@ -98,12 +105,100 @@ function createVitePluginInjector(opts: IntegrationOptions) {
                 if (!didChange) return;
 
                 const result = serialize(ast);
-                console.log(result);
 
                 return result;
             },
         };
     }
+}
+
+// alternatively use magic string
+const H_IMPORT = `import { Fragment, jsx as h } from 'astro/jsx-runtime';\n`;
+function transformCreateElementToH(frontmatter: string) {
+    // Parse the code using Esprima
+    console.log({ frontmatter });
+
+    const ast = parseModule(frontmatter);
+
+    // Traverse the AST and transform the relevant nodes
+    let hasReactJsx = false;
+    jsTreeWalker(ast, {
+        enter(node) {
+            if (
+                node.type === 'CallExpression' &&
+                node.callee.type === 'MemberExpression' &&
+                // @ts-expect-error types are wrong
+                node.callee.object.name === 'React' &&
+                // @ts-expect-error types are wrong
+                node.callee.property.name === 'createElement' &&
+                node.arguments.length >= 2
+            ) {
+                hasReactJsx = true;
+                // Replace the React.createElement call with a call to h
+                node.callee = { type: 'Identifier', name: 'h' };
+
+                // Collect the children into an array and remove them from the argument list
+                const children = [];
+                node.arguments.splice(2).forEach((arg) => {
+                    if (arg.type === 'Literal') {
+                        // @ts-expect-error types are wrong
+                        children.push({ type: 'Literal', value: arg.value });
+                    } else if (arg.type === 'Identifier') {
+                        // @ts-expect-error types are wrong
+                        children.push({
+                            type: 'Identifier',
+                            name: arg.name,
+                        });
+                    } else {
+                        // @ts-expect-error types are wrong
+                        children.push(arg);
+                    }
+                });
+
+                // Add a childrenF property to the props object that contains the children array
+                const propsArg = node.arguments[1];
+                if (propsArg && propsArg.type === 'ObjectExpression') {
+                    // @ts-expect-error types are wrong
+                    propsArg.properties.push({
+                        type: 'Property',
+                        key: { type: 'Identifier', name: 'children' },
+                        value: {
+                            type: 'ArrayExpression',
+                            elements: children,
+                        },
+                        kind: 'init',
+                    });
+                } else {
+                    node.arguments.splice(1, 0, {
+                        type: 'ObjectExpression',
+                        properties: [
+                            // @ts-expect-error types are wrong
+                            {
+                                type: 'Property',
+                                key: {
+                                    type: 'Identifier',
+                                    name: 'children',
+                                },
+                                value: {
+                                    type: 'ArrayExpression',
+                                    elements: children,
+                                },
+                                kind: 'init',
+                            },
+                        ],
+                    });
+                }
+            }
+        },
+    });
+    if (hasReactJsx) {
+        // Generate the transformed code by serializing the AST
+        console.log('has react jsx');
+        const transformedCode = print(ast).code.trim();
+        console.log('has end react jsx');
+        return H_IMPORT + transformedCode;
+    }
+    return frontmatter;
 }
 
 async function wait(ms) {
