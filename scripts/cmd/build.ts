@@ -96,8 +96,11 @@ export default async function build(...args: any[]) {
     const builder = await esbuild.context({
         ...config,
         entryPoints,
+        bundle,
+        external: bundle ? Object.keys(dependencies) : undefined,
         outdir,
         format,
+        outExtension: forceCJS ? { '.js': '.cjs' } : { '.js': '.mjs' },
         plugins: [rebuildPlugin],
     });
 
