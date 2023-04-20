@@ -9,6 +9,6 @@ export const swcInlineConfig: Options = {
         target: 'esnext',
     },
     module: {
-        type: 'commonjs',
+        type: 'es6',
     },
 } as const;

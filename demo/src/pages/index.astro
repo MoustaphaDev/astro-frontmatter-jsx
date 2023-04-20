@@ -1,4 +1,15 @@
 ---
+import Card from './_Card.astro';
+
+const getCard = (type: 'quizz' | 'note') => {
+    if (type === 'quizz') {
+        return <h1 class="text-red-700">This is a quizz card</h1>;
+    }
+    return <h1> This is a note card</h1>;
+};
+
+const QuizzCard = async () => getCard('quizz');
+const NoteCard = async () => getCard('note');
 ---
 
 <html lang="en">
@@ -11,5 +22,7 @@
     </head>
     <body>
         <h1>Astro</h1>
+        <QuizzCard />
+        <NoteCard />
     </body>
 </html>
